@@ -67,14 +67,6 @@ def carregar_eventos(match_id):
     return sb.events(match_id=match_id)
 
 
-@st.cache_data
-def carregar_escalacoes(match_id):
-    try:
-        return sb.lineups(match_id=match_id)
-    except Exception:
-        return None
-
-
 # Funções de cálculo
 
 def calcular_metricas(dados):
@@ -245,7 +237,8 @@ def criar_mapa_passes(dados):
         width=1.5,
         headwidth=3,
         headlength=3,
-        alpha=0.5,
+        alpha=0.6,
+        color="green",
         ax=ax,
         label="Passe completo"
     )
@@ -258,7 +251,8 @@ def criar_mapa_passes(dados):
         width=1.5,
         headwidth=3,
         headlength=3,
-        alpha=0.3,
+        alpha=0.6,
+        color="red",
         ax=ax,
         label="Passe incompleto"
     )
@@ -595,6 +589,9 @@ with st.container():
         **Pergunta de análise:**  
         Como variou a produção ofensiva da Seleção do Marrocos
         em diferentes competições internacionais?
+
+        **Justificativa:**  
+        Escolhi trabalhar com a Seleção do Marrocos por uma razão pessoal, já que tenho descendência marroquina, mas também pelo destaque recente da equipe no futebol internacional, especialmente na Copa do Mundo de 2022. Isso tornou interessante comparar seu desempenho ofensivo em diferentes competições e temporadas.
         """
     )
 
@@ -668,7 +665,6 @@ temporadas_disponiveis = (
     .tolist()
 )
 
-
 if (
     "temporada_selecionada"
     not in st.session_state
@@ -724,6 +720,16 @@ with st.spinner(
     )
 
 
+if partidas_marrocos.empty:
+
+    st.error(
+        "Não foram encontradas partidas da Seleção do Marrocos "
+        "para a competição e temporada selecionadas."
+    )
+
+    st.stop()
+
+
 barra_progresso.progress(
     40,
     text="Partidas carregadas."
@@ -735,13 +741,9 @@ barra_progresso.progress(
 partidas_marrocos["partida"] = (
     partidas_marrocos["home_team"]
     + " "
-    + partidas_marrocos[
-        "home_score"
-    ].astype(str)
+    + partidas_marrocos["home_score"].astype(str)
     + " x "
-    + partidas_marrocos[
-        "away_score"
-    ].astype(str)
+    + partidas_marrocos["away_score"].astype(str)
     + " "
     + partidas_marrocos["away_team"]
 )
@@ -789,14 +791,10 @@ match_id = int(
 # Carregamento dos eventos
 
 with st.spinner(
-    "Carregando eventos e jogadores..."
+    "Carregando eventos..."
 ):
 
     eventos = carregar_eventos(
-        match_id
-    )
-
-    escalacoes = carregar_escalacoes(
         match_id
     )
 
@@ -810,6 +808,16 @@ barra_progresso.progress(
 eventos_marrocos = eventos[
     eventos["team"] == "Morocco"
 ].copy()
+
+
+if eventos_marrocos.empty:
+
+    st.error(
+        "Não foram encontrados eventos da Seleção do Marrocos "
+        "para esta partida."
+    )
+
+    st.stop()
 
 
 # Seleção de jogador
@@ -1003,7 +1011,7 @@ with aba_resumo:
     with st.container():
 
         st.subheader(
-            "Resumo da partida"
+            "Resumo da Seleção do Marrocos na partida"
         )
 
         st.write(
@@ -1131,8 +1139,8 @@ with aba_passes:
         )
 
     st.caption(
-        "As setas representam a origem "
-        "e o destino de cada passe."
+        "Passes completos são apresentados em verde "
+        "e passes incompletos em vermelho."
     )
 
 
@@ -1288,11 +1296,8 @@ with aba_comparacao:
                     )
                 )
 
-
-            comparar = (
-                st.form_submit_button(
-                    "Comparar jogadores"
-                )
+            st.form_submit_button(
+                "Comparar jogadores"
             )
 
 
@@ -1397,11 +1402,9 @@ with aba_eventos:
             )
         )
 
-
         busca = st.text_input(
             "Buscar jogador ou tipo de evento"
         )
-
 
         tipo_visualizacao = st.radio(
             "Tipo de evento",
@@ -1412,7 +1415,6 @@ with aba_eventos:
             ]
         )
 
-
         apenas_localizados = (
             st.checkbox(
                 "Mostrar apenas eventos "
@@ -1420,11 +1422,8 @@ with aba_eventos:
             )
         )
 
-
-        aplicar_filtros = (
-            st.form_submit_button(
-                "Aplicar filtros"
-            )
+        st.form_submit_button(
+            "Aplicar filtros"
         )
 
 
