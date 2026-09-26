@@ -67,6 +67,11 @@ def carregar_eventos(match_id):
     return sb.events(match_id=match_id)
 
 
+@st.cache_data
+def carregar_escalacoes(match_id):
+    return sb.lineups(match_id=match_id)
+
+
 # Funções de cálculo
 
 def calcular_metricas(dados):
@@ -439,7 +444,7 @@ def criar_grafico_participacao(dados):
 
 # Funções da interface
 
-def exibir_metricas(metricas):
+def exibir_metricas(metricas, rotulo_gols="Gols"):
 
     coluna1, coluna2, coluna3, coluna4 = st.columns(4)
 
@@ -471,7 +476,7 @@ def exibir_metricas(metricas):
 
     with coluna5:
         st.metric(
-            "Gols",
+            rotulo_gols,
             metricas["gols"]
         )
 
@@ -788,20 +793,24 @@ match_id = int(
 )
 
 
-# Carregamento dos eventos
+# Carregamento dos eventos e jogadores
 
 with st.spinner(
-    "Carregando eventos..."
+    "Carregando eventos e jogadores..."
 ):
 
     eventos = carregar_eventos(
         match_id
     )
 
+    escalacoes = carregar_escalacoes(
+        match_id
+    )
+
 
 barra_progresso.progress(
     70,
-    text="Eventos carregados."
+    text="Eventos e jogadores carregados."
 )
 
 
@@ -822,7 +831,7 @@ if eventos_marrocos.empty:
 
 # Seleção de jogador
 
-jogadores = sorted(
+jogadores_eventos = set(
     eventos_marrocos[
         "player"
     ]
@@ -830,6 +839,34 @@ jogadores = sorted(
     .unique()
     .tolist()
 )
+
+
+if (
+    isinstance(escalacoes, dict)
+    and "Morocco" in escalacoes
+    and "player_name" in escalacoes["Morocco"].columns
+):
+
+    jogadores_escalacao = (
+        escalacoes["Morocco"]["player_name"]
+        .dropna()
+        .unique()
+        .tolist()
+    )
+
+    jogadores = sorted(
+        [
+            jogador
+            for jogador in jogadores_escalacao
+            if jogador in jogadores_eventos
+        ]
+    )
+
+else:
+
+    jogadores = sorted(
+        jogadores_eventos
+    )
 
 
 opcoes_jogadores = [
@@ -1032,6 +1069,16 @@ with aba_resumo:
             f"{linha_partida['away_team']}"
         )
 
+    total_gols_partida = int(
+        linha_partida["home_score"]
+        + linha_partida["away_score"]
+    )
+
+    st.metric(
+        "Total de gols da partida",
+        total_gols_partida
+    )
+
     st.divider()
 
     metricas_partida = calcular_metricas(
@@ -1039,7 +1086,8 @@ with aba_resumo:
     )
 
     exibir_metricas(
-        metricas_partida
+        metricas_partida,
+        rotulo_gols="Gols da Seleção do Marrocos"
     )
 
 
@@ -1065,7 +1113,8 @@ with aba_resumo:
         )
 
         exibir_metricas(
-            metricas_jogador
+            metricas_jogador,
+            rotulo_gols="Gols"
         )
 
 
